@@ -57,9 +57,9 @@ class FN_server_database_mysql{
 	}
 	
 	function query($sql, $type = '') {
-		$func = $type == 'UNBUFFERED' && @function_exists('mysql_unbuffered_query') ?
-			'mysql_unbuffered_query' : 'mysql_query';
-		if(!($query = $func($sql, $this->link))) {
+		$func = ($type == 'UNBUFFERED' && @function_exists('mysql_unbuffered_query')) ? 'mysql_unbuffered_query' : 'mysql_query';
+		$query = call_user_func_array($func,array($sql, $this->link));
+		if(!$query){
 			if(in_array($this->errno(), array(2006, 2013)) && substr($type, 0, 5) != 'RETRY') {
 				$this->close();
 			} elseif($type != 'SILENT' && substr($type, 5) != 'SILENT') {

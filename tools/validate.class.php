@@ -12,7 +12,7 @@
 */
 class FN_tools_validate implements FN__single{
 	static private $_Instance = null;
-	static public function getInstance($array = array()){
+	static public function getInstance($array){
 		if(!self::$_Instance){
 			self::$_Instance = new self();
 		}
