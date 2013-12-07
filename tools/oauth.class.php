@@ -5,7 +5,8 @@ class FN_tools_oauth extends FN_tools_rest implements FN__auto{
 	protected $expires_time = null;
 	protected $refresh_token = null;
 	protected $oauth = null;
-
+	protected $nick = null;
+	protected $avatar = null;
 	public function getVar(){
 		return array(
 			'oauth'=>$this->oauth,
@@ -22,6 +23,9 @@ class FN_tools_oauth extends FN_tools_rest implements FN__auto{
 		$this->refresh_token = $array['refresh_token'];
 	}
 	public function getUserInfo(){
-
+		return array(
+			'nickname'=>$this->nickname,
+			'avatar'=>$this->avatar
+		);
 	}
 }

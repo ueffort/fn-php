@@ -17,11 +17,11 @@ class FN_platform_weibo extends FN_platform{
 			case 'oauth':
 				$config['appkey'] = $this->appkey;
 				$config['appsercet'] = $this->appsercet;
-				return FN_platform_qqoauth($config);
+				return FN_platform_weibooauth($config);
 		}
 	}
 }
-class FN_server_oauth_weibo extends FN_tools_oauth{
+class FN_platform_weibooauth extends FN_tools_oauth{
 	const VERSION = "2.0";
     const GET_AUTH_CODE_URL = "https://graph.qq.com/oauth2.0/authorize";
     const GET_ACCESS_TOKEN_URL = "https://graph.qq.com/oauth2.0/token";

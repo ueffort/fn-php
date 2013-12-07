@@ -58,7 +58,7 @@ class FN_tools_rest implements FN__auto{
      * @return string         返回的资源内容
      */
     public function put($url, $keysArr=array(),$options=array()){
-		$options['method'] = 'GET';
+		$options['method'] = 'PUT';
 		$options['url'] = empty($keysArr) ? $url : $this->combineURL($url, $keysArr);
 		return $this->request($options);
     }
@@ -624,7 +624,7 @@ class FN_tools_restrequest{
 		curl_setopt ( $curl_handle, CURLOPT_FILETIME, true );
 		curl_setopt ( $curl_handle, CURLOPT_FRESH_CONNECT, false );
 		curl_setopt ( $curl_handle, CURLOPT_SSL_VERIFYPEER, false );
-		curl_setopt ( $curl_handle, CURLOPT_SSL_VERIFYHOST, true );
+		curl_setopt ( $curl_handle, CURLOPT_SSL_VERIFYHOST, false );
 		curl_setopt ( $curl_handle, CURLOPT_CLOSEPOLICY, CURLCLOSEPOLICY_LEAST_RECENTLY_USED );
 		curl_setopt ( $curl_handle, CURLOPT_MAXREDIRS, 5 );
 		curl_setopt ( $curl_handle, CURLOPT_HEADER, true );
@@ -723,7 +723,7 @@ class FN_tools_restrequest{
 		$response_headers = explode ( "\r\n\r\n", trim ( $response_headers ) );
 		$response_headers = array_pop ( $response_headers );
 		$response_headers = explode ( "\r\n", $response_headers );
-		array_shift ( $this->response_headers );
+		array_shift ( $response_headers );
 		// Loop through and split up the headers.
 		$header_assoc = array ();
 		foreach ( $response_headers as $header ) {

@@ -38,8 +38,8 @@ class FN_platform_qqoauth extends FN_tools_oauth{
         );
 		header('Location:'.$this->combineURL(self::GET_AUTH_CODE_URL, $keysArr));
 	}
-	public function callback($status){
-		if(empty($_GET['state']) || $_GET['state'] != $status) return false;
+	public function callback($state){
+		if(empty($_GET['state']) || $_GET['state'] != $state) return false;
 		$keysArr = array(
 			"grant_type" => "authorization_code",
 			"client_id" => $this->config['appid'],
