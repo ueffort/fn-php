@@ -124,8 +124,10 @@ class FN_server_database_mysql{
 	}
 	function halt($message = '', $sql = '') {
 		//@file_put_contents(FRAME_DATA.'sql.log','[MYSQL]['.$this->errno().']'.date('Y-m-d H:m:i').':'.$this->error().' '.$sql."\r\n",FILE_APPEND);
-		if(!FN::getConfig('debug/sql')) $sql = '';
-		echo $message.'<br />'.$sql;
+		echo $message;
+		if(FN::getConfig('debug/sql')){
+			echo '['.$this->errno().']'.date('Y-m-d H:m:i').':'.$this->error().' '.$sql;
+		}
 	}
 	function getFirst($sql) {
 		return $this->fetch_array($this->query($sql));

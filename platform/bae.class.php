@@ -7,14 +7,9 @@ class FN_platform_bae extends FN_platform{
 	protected $PlatformSelf = 'bae';
 	
 	public function __construct($config){
-		if($this->isCloudSelf()){
-			$this->accesskey = getenv('HTTP_BAE_ENV_AK');
-			$this->securekey = getenv('HTTP_BAE_ENV_SK');
-			$this->appid = getenv('HTTP_BAE_ENV_APPID');
-		}else{
-			$this->accesskey = $config['accesskey'];
-			$this->securekey = $config['securekey'];
-		}
+		$this->accesskey = $config['accesskey'];
+		$this->securekey = $config['securekey'];
+		$this->appid = $config['appid'];
 	}
 	//统一调用云平台服务
 	/**
@@ -477,7 +472,7 @@ class FN_platform_baeQueue extends FN_tools_rest{
 	//生成签名
 	protected function sign($method,$url,$params){
 		$basic_string = $method.$url;
-		sort($params);
+		ksort($params);
 		foreach($params as $key=>$value){
 			$basic_string .= $key.'='.$value;
 		}
@@ -496,9 +491,9 @@ class FN_platform_baeQueue extends FN_tools_rest{
 		$header['Host'] = 'bcms.api.duapp.com';
 		$header['Content-Type'] = 'application/x-www-form-urlencoded';
 		$options = array('header'=>$header);
-		$options['method'] = $params['method'];
+		$options['method'] = 'POST';
 		$options['url'] = $url;
-		if($params['method'] == 'GET'){
+		if($options['method'] == 'GET'){
 			$options['url'] = $this->combineURL($options['url'],$params);
 		}else{
 			$options['content'] = $this->combineParams($params);
@@ -517,6 +512,7 @@ class FN_platform_baeMail extends FN_platform_baeQueue{
 	}
 	public function setFrom($from){
 		$this->from = $from;
+		return $this;
 	}
 	public function mail($address,$subject,$message,$ishtml=false){
 		if(is_array($address)){
@@ -524,7 +520,7 @@ class FN_platform_baeMail extends FN_platform_baeQueue{
 		}
 		$params['address'] = $address;
 		$params['method'] = 'mail';
-		$params['message'] = ($ishtml ? ' <!--HTML-->':'').$message;//如果是二进制内容，需要将内容先做BASE64编码成文本再发布消息
+		$params['message'] = ($ishtml ? '<!--HTML-->':'').$message;//如果是二进制内容，需要将内容先做BASE64编码成文本再发布消息
 		$params['mail_subject'] = $subject;
 		if($this->from) $params['from'] = $this->from;
 		return $this->requestProxy($params);

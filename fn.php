@@ -419,7 +419,6 @@ define('SET_MAGIC_QUOTES_GPC',get_magic_quotes_gpc());
 define('TIME_BASE',time());
 class FNbase{
 	static private $_Ip;
-	static private $_GUID;
 	static private $_RequestUri;
 	static private $_Baseuri;
 	static public function isAJAX(){
@@ -591,7 +590,7 @@ class FNbase{
 		}
 		return $hash;
 	}
-	static public function guid($op=false,$namespace=''){
+	static public function guid($namespace='',$op=false){
 		$uid = uniqid("", true);
 		$data = $namespace;
 		$data .= $_SERVER['REQUEST_TIME'];
@@ -600,13 +599,12 @@ class FNbase{
 		$data .= $_SERVER['SERVER_PORT'];
 		$data .= $_SERVER['REMOTE_ADDR'];
 		$data .= $_SERVER['REMOTE_PORT'];
-		$hash = strtoupper(hash('ripemd128', $uid . self::$_GUID . md5($data)));
+		$hash = strtoupper(hash('ripemd128', $uid . md5($data)));
 		if($op){
-			self::$_GUID = substr($hash,0,32);
+			return substr($hash,0,32);
 		}else{
-			self::$_GUID = substr($hash,  0,  8).'-'.substr($hash,  8,  4) .'-'.substr($hash, 12,  4) .'-'.substr($hash, 16,  4).'-'.substr($hash, 20, 12);
+			return substr($hash,  0,  8).'-'.substr($hash,  8,  4) .'-'.substr($hash, 12,  4) .'-'.substr($hash, 16,  4).'-'.substr($hash, 20, 12);
 		}
-		return self::$_GUID;
 	}
 	static public function authcode($string, $operation = 'DECODE', $key = '', $expiry = 0) {
 		$ckey_length = 4;
@@ -716,8 +714,25 @@ class FNbase{
 		}
 	}
 }
+
+//基本错误接口类
+class FN_class{
+	private $error = null;
+	private $errorno = null;
+	protected function setError($errorno,$error){
+		$this->error = $error;
+		$this->errorno = $errorno;
+		return false;
+	}
+	public function getError(){
+		return $this->error;
+	}
+	public function getErrorNo(){
+		return $this->errorno;
+	}
+}
 //服务平台抽象类类
-class FN_platform implements FN__auto{
+class FN_platform extends FN_class implements FN__auto{
 	protected $PlatformSelf = null;
     private $config = null;
     public function __construct($config){
@@ -763,6 +778,11 @@ class class_tools{
 					return $toret[0];
 				}
 			}
+		}
+		//BUG修正，复杂环境直接多一层判断
+		if(array_key_exists("object",$bt[2]) && array_key_exists("class",$bt[2])){
+			if ( $bt[2]['object'] instanceof $bt[2]['class'] )
+				return get_class( $bt[2]['object'] );
 		}
 		//使用正常途径调用类方法，如:A::make()
 		if(self::$fl == $bt[2]['file'].$bt[2]['line']) {

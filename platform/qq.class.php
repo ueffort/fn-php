@@ -32,7 +32,7 @@ class FN_platform_qqoauth extends FN_tools_oauth{
 		$keysArr = array(
 			"response_type" => "code",
 			"client_id" => $this->config['appid'],
-			"redirect_uri" => urlencode($this->config['redirect_uri']),
+			"redirect_uri" => $this->redirect_uri,
 			"state" => $state,
 			"scope" => $this->config['scope']
         );
@@ -43,7 +43,7 @@ class FN_platform_qqoauth extends FN_tools_oauth{
 		$keysArr = array(
 			"grant_type" => "authorization_code",
 			"client_id" => $this->config['appid'],
-			"redirect_uri" => urlencode($this->config['redirect_uri']),
+			"redirect_uri" => $this->redirect_uri,
 			"client_secret" => $this->config['appkey'],
 			"code" => $_GET['code']
         );
@@ -58,12 +58,12 @@ class FN_platform_qqoauth extends FN_tools_oauth{
 			if(isset($msg['error'])) return false;
         }
 
-		$params = array();
-		parse_str($body, $params);
-		$this->access_token = $params["access_token"];
+		$info = array();
+		parse_str($body, $info);
+		$this->access_token = $info["access_token"];
 		$this->open_id = $this->getopenid();
-		$this->expires_time = $params['expires_in'];
-		$this->refresh_token = $params['refresh_token'];
+		$this->expires_time = time()+$info['expires_in'];
+		$this->refresh_token = $info['refresh_token'];
 		return true;
 	}
 	public function getopenid(){
@@ -85,11 +85,11 @@ class FN_platform_qqoauth extends FN_tools_oauth{
 
         return $user['openid'];
 	}
-	public function getinfo(){
+	public function getUserInfo(){
 		$keysArr = array(
             "access_token" => $this->access_token,
 			"oauth_consumer_key" => $this->config['appid'],
-			"openid" => $this->openid,
+			"openid" => $this->open_id,
 			"format" => 'json'
         );
 
@@ -97,7 +97,9 @@ class FN_platform_qqoauth extends FN_tools_oauth{
 		$body = $response->getBody();
 		$info = json_decode($body,true);
 		if($info['ret']>0) return false;//输出错误信息
-        return $info;
+		$this->nickname = $info['nickname'];
+		$this->avatar = empty($info['figureurl_qq_2']) ? $info['figureurl_qq_1'] : $info['figureurl_qq_2'];
+		return parent::getUserInfo();
 	}
 	public function verifycode(){
 		return isset($_GET['code']);

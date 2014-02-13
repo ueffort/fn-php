@@ -1,6 +1,6 @@
 <?php
 //为rest接口设计的基本工具类
-class FN_tools_rest implements FN__auto{
+class FN_tools_rest extends FN_class implements FN__auto{
 	protected $config = null;
 	public function __construct($config){
 		$this->config = $config;
