@@ -309,7 +309,7 @@ class FN{
 		if(!empty($path)) substr($path, -1) != '/' && $path .= "/";
 		$file = $path.$file;
 		if(isset(self::$_FileSpace[$file])) return true;
-		if(file_exists($file)) {
+		if(file_exists($file)&&!is_dir($file)) {
 			include_once ($file);
 			return self::$_FileSpace[$file] = true;
 		}else {
