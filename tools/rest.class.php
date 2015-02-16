@@ -106,7 +106,7 @@ class FN_tools_rest extends FN_class implements FN__auto{
 		//build request
 		$request = new FN_tools_restrequest( $option ['url'] );
 		$headers = array ('Content-Type' => 'application/x-www-form-urlencoded' );
-		
+
 		$request->set_method ( $option ['method'] );
 		//Write get_object content to fileWriteTo
 		if (isset ( $option ['fileWriteTo'] )) {
@@ -129,7 +129,7 @@ class FN_tools_rest extends FN_class implements FN__auto{
 		// Upload file
 		if (isset ( $option ['fileUpload'] )) {
 			if (! file_exists ( $option ['fileUpload'] )) {
-				throw new FN_tools_restException ( 'File[' . $option ['fileUpload'] . '] not found!', - 1 );
+				throw new FN_exception ( 'File[' . $option ['fileUpload'] . '] not found!', - 1 );
 			}
 			$request->set_read_file ( $option ['fileUpload'] );
 			// Determine the length to read from the file
@@ -137,7 +137,7 @@ class FN_tools_rest extends FN_class implements FN__auto{
 			$file_size = $length;
 			if (isset ( $option ["length"] )) {
 				if ($option ["length"] > $file_size) {
-					throw new FN_tools_restException ( "Input option[length] invalid! It can not bigger than file-size", - 1 );
+					throw new FN_exception ( "Input option[length] invalid! It can not bigger than file-size", - 1 );
 				}
 				$length = $option ['length'];
 			}
@@ -163,7 +163,7 @@ class FN_tools_rest extends FN_class implements FN__auto{
 		foreach ( $headers as $header_key => $header_value ) {
 			// Strip linebreaks from header values as they're illegal and can allow for security issues
 			$header_value = str_replace ( array (
-					"\r", 
+					"\r",
 					"\n" ), '', $header_value );
 			// Add the header if it has a value
 			if ($header_value !== '') {
@@ -574,7 +574,7 @@ class FN_tools_restrequest{
 		// If we're at the beginning of an upload and need to seek...
 		if ($this->read_stream_read == 0 && isset ( $this->seek_position ) && $this->seek_position !== ftell ( $this->read_stream )) {
 			if (fseek ( $this->read_stream, $this->seek_position ) !== 0) {
-				throw new FN_tools_restException ( 'The stream does not support seeking and is either not at the requested position or the position is unknown.' );
+				throw new FN_exception ( 'The stream does not support seeking and is either not at the requested position or the position is unknown.' );
 			}
 		}
 		$read = fread ( $this->read_stream, min ( $this->read_stream_size - $this->read_stream_read, $length ) ); // Remaining upload data or cURL's requested chunk size
@@ -670,7 +670,7 @@ class FN_tools_restrequest{
 				curl_setopt ( $curl_handle, CURLOPT_CUSTOMREQUEST, 'PUT' );
 				if (isset ( $this->read_stream )) {
 					if (! isset ( $this->read_stream_size ) || $this->read_stream_size < 0) {
-						throw new FN_tools_restException ( 'The stream size for the streaming upload cannot be determined.' );
+						throw new FN_exception ( 'The stream size for the streaming upload cannot be determined.' );
 					}
 					curl_setopt ( $curl_handle, CURLOPT_INFILESIZE, $this->read_stream_size );
 					curl_setopt ( $curl_handle, CURLOPT_UPLOAD, true );
@@ -690,7 +690,7 @@ class FN_tools_restrequest{
 				curl_setopt ( $curl_handle, CURLOPT_CUSTOMREQUEST, $this->method );
 				if (isset ( $this->write_stream )) {
 					curl_setopt ( $curl_handle, CURLOPT_WRITEFUNCTION, array (
-							$this, 
+							$this,
 							'streaming_write_callback' ) );
 					curl_setopt ( $curl_handle, CURLOPT_HEADER, false );
 				} else {
@@ -704,20 +704,20 @@ class FN_tools_restrequest{
 				curl_setopt ( $curl_handle, $k, $v );
 			}
 		}
-		
+
 		$response = curl_exec( $curl_handle );
 		if ($response === false ||
                 ($this->method === self::HTTP_GET &&
                   curl_errno($curl_handle) === CURLE_PARTIAL_FILE)) {
-			throw new FN_tools_restException ( 'cURL resource: ' . ( string ) $curl_handle . '; cURL error: ' . curl_error ( $curl_handle ) . ' (' . curl_errno ( $curl_handle ) . ')' );
+			throw new FN_exception ( 'cURL resource: ' . ( string ) $curl_handle . '; cURL error: ' . curl_error ( $curl_handle ) . ' (' . curl_errno ( $curl_handle ) . ')' );
 		}
-		
+
 		$header_size = curl_getinfo ( $curl_handle, CURLINFO_HEADER_SIZE );
 		$response_headers = substr ( $response, 0, $header_size );
 		$response_body = substr ( $response, $header_size );
 		$response_code = curl_getinfo ( $curl_handle, CURLINFO_HTTP_CODE );
 		$response_info = curl_getinfo ( $curl_handle );
-		
+
 		curl_close( $curl_handle );
 		// Parse out the headers
 		$response_headers = explode ( "\r\n\r\n", trim ( $response_headers ) );
@@ -755,7 +755,7 @@ class FN_tools_restrequest{
 			return array ();
 		if (! $opt)
 			$opt = array ();
-		
+
 		// Initialize any missing options
 		$limit = isset ( $opt ['limit'] ) ? $opt ['limit'] : - 1;
 		// Initialize
@@ -787,7 +787,7 @@ class FN_tools_restrequest{
 			while ( $done = curl_multi_info_read ( $multi_handle ) ) {
 				// Since curl_errno() isn't reliable for handles that were in multirequests, we check the 'result' of the info read, which contains the curl error number, (listed here http://curl.haxx.se/libcurl/c/libcurl-errors.html )
 				if ($done ['result'] > 0) {
-					throw new FN_tools_restException ( 'cURL resource: ' . ( string ) $done ['handle'] . '; cURL error: ' . curl_error ( $done ['handle'] ) . ' (' . $done ['result'] . ')' );
+					throw new FN_exception ( 'cURL resource: ' . ( string ) $done ['handle'] . '; cURL error: ' . curl_error ( $done ['handle'] ) . ' (' . $done ['result'] . ')' );
 				} // Because curl_multi_info_read() might return more than one message about a request, we check to see if this request is already in our array of completed requests
 elseif (! isset ( $to_process [( int ) $done ['handle']] )) {
 					$to_process [( int ) $done ['handle']] = $done;
@@ -885,9 +885,4 @@ class FN_tools_restresponse {
 	public function getCode() {
 		return $this->code;
 	}
-}
-/**
- * Default BCS_RequestCore Exception.
- */
-class FN_tools_restException extends Exception {
 }

@@ -612,28 +612,28 @@ class FNbase{
 		$keya = md5(substr($key, 0, 16));
 		$keyb = md5(substr($key, 16, 16));
 		$keyc = $ckey_length ? ($operation == 'DECODE' ? substr($string, 0, $ckey_length): substr(md5(microtime()), -$ckey_length)) : '';
-	
+
 		$cryptkey = $keya.md5($keya.$keyc);
 		$key_length = strlen($cryptkey);
-	
+
 		$string = $operation == 'DECODE' ? base64_decode(substr($string, $ckey_length)) : sprintf('%010d', $expiry ? $expiry + time() : 0).substr(md5($string.$keyb), 0, 16).$string;
 		$string_length = strlen($string);
-	
+
 		$result = '';
 		$box = range(0, 255);
-	
+
 		$rndkey = array();
 		for($i = 0; $i <= 255; $i++) {
 			$rndkey[$i] = ord($cryptkey[$i % $key_length]);
 		}
-	
+
 		for($j = $i = 0; $i < 256; $i++) {
 			$j = ($j + $box[$i] + $rndkey[$i]) % 256;
 			$tmp = $box[$i];
 			$box[$i] = $box[$j];
 			$box[$j] = $tmp;
 		}
-	
+
 		for($a = $j = $i = 0; $i < $string_length; $i++) {
 			$a = ($a + 1) % 256;
 			$j = ($j + $box[$a]) % 256;
@@ -642,7 +642,7 @@ class FNbase{
 			$box[$j] = $tmp;
 			$result .= chr(ord($string[$i]) ^ ($box[($box[$a] + $box[$j]) % 256]));
 		}
-	
+
 		if($operation == 'DECODE') {
 			if((substr($result, 0, 10) == 0 || substr($result, 0, 10) - time() > 0) && substr($result, 10, 16) == substr(md5(substr($result, 26).$keyb), 0, 16)) {
 				return substr($result, 26);
@@ -715,24 +715,31 @@ class FNbase{
 	}
 }
 
-//基本错误接口类
-class FN_class{
-	private $error = null;
-	private $errorno = null;
-	protected function setError($errorno,$error){
-		$this->error = $error;
-		$this->errorno = $errorno;
-		return false;
+//基本错误异常类
+class FN_exception extends Exception{
+	protected $_message;
+	private $_debug;
+
+	public function __construct($message, $debug=''){
+		parent::__construct($message);
+		$this->_message = $message;
+		$this->_debug = $debug;
 	}
-	public function getError(){
-		return $this->error;
+
+	public function getErrorCode(){
+		return $this->_code;
 	}
-	public function getErrorNo(){
-		return $this->errorno;
+
+	public function getErrorMessage(){
+		return $this->_message;
+	}
+
+	public function getDebug(){
+		return $this->_debug;
 	}
 }
 //服务平台抽象类类
-class FN_platform extends FN_class implements FN__auto{
+class FN_platform implements FN__auto{
 	protected $PlatformSelf = null;
     private $config = null;
     public function __construct($config){
@@ -750,7 +757,7 @@ class FN_platform extends FN_class implements FN__auto{
 	 * 代理服务接口，转为全局类接口
 	 */
 	public function server($servername,&$config){
-		
+
 	}
 	public function parsePath($dir,$Symbol){
 		return $dir;

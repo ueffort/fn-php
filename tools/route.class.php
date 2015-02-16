@@ -15,6 +15,18 @@
  */
 class FN_tools_route implements FN__single{
 	static private $_Instance = null;
+	private $_RouteArray = array();
+	static public function getInstance($array){
+		if(!self::$_Instance) self::$_Instance = new self();
+		return self::$_Instance;
+	}
+	private function __construct(){}
+	public function route($rule, $class){
+		
+	}
+}
+class FN_tools_route implements FN__single{
+	static private $_Instance = null;
 	private $URLPrefix = '';
 	private $DEBUG = false;
 	private $HOST = false;
@@ -62,7 +74,7 @@ class FN_tools_route implements FN__single{
 		return $this;
 	}
 	static public function parseSlice($string,$arg1,$arg2=false){
-		return $arg2 ? substr($string, $arg1, $arg2) : substr($string,$arg1); 
+		return $arg2 ? substr($string, $arg1, $arg2) : substr($string,$arg1);
 	}
 	static public function parseParam($param,$split = '/'){
 		if(empty($param)) return array();
@@ -130,7 +142,7 @@ class FN_tools_route implements FN__single{
 					$index++;
 					if($index >= $count) break;
 				}while($value_arr_tmp[$index][1] < $length);
-				
+
 			}
 		}
 		if(!$r_key) return false;
@@ -155,7 +167,7 @@ class FN_tools_route implements FN__single{
 					if(is_array($value)) continue;
 					$search_arr[]='$'.$key;
 					$replace_arr[]=$value;
-				}	
+				}
 				$rule['class'] = str_replace($search_arr,$replace_arr,$rule['class']);
 			}
 		}
