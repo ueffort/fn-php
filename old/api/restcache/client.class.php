@@ -3,7 +3,7 @@
  * 在按rest方式获取信息，能通过统一的缓存服务，进行信息的缓存的操作处理
  * 缓存的操作由客户端实行，用于实现客户端定制缓存
 */
-class FN_layer_api_restcache_client implements FN__single{
+class FN_layer_api_restcache_client implements FN__factory{
 	static private $_Instance = array();
 	private $cache = null;
 	protected $domain = null;
@@ -13,7 +13,7 @@ class FN_layer_api_restcache_client implements FN__single{
 	protected $debug = false;
 	protected $type = null;
 	protected $freq = 5;//默认缓存5分钟
-	static function getInstance($array){
+	static function getFactory($array){
 		if(empty(self::$_Instance)){
 			if(!empty($array['proxy'])){
 				self::$_Instance = FN::F('layer.api.restcache.proxy');
@@ -143,4 +143,3 @@ class FN_layer_api_restcache_client implements FN__single{
 		return !isset($content['data']) ? array() : $this->_cache_msg($url,'delete cache','log');
 	}
 }
-?>

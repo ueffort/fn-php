@@ -64,4 +64,3 @@ class FN_layer_api_restcache_proxy extends FN_layer_api_restcache_client{
 		return $this->_parseType($content);
 	}
 }
-?>

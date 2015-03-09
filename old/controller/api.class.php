@@ -22,4 +22,3 @@ class FN_layer_controller_api implements FN__single{
 		return $this->error;
 	}
 }
-?>

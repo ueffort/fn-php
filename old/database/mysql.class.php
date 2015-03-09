@@ -144,5 +144,3 @@ class FN_server_database_mysql{
 		$this->close();
 	}
 }
-
-?>

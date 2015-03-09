@@ -3,16 +3,12 @@
  * 在按rest方式提供信息的同时，能通过统一的缓存服务，进行信息的缓存
  */
 class FN_layer_api_restcache_server implements FN__single{
-	private static $_Instance = null;
 	private $class = null;
 	private $array = array();
 	private $error = false;
 	//每次都获取到同一个类
-	static public function getInstance($array){
-        if(!self::$_Instance){
-            self::$_Instance = new self();
-        }
-        return self::$_Instance;
+	static public function getInstance(){
+        return new self();
     }
 	public function init($array){
 		$this->array = $array;
@@ -84,4 +80,3 @@ class FN_layer_api_restcache_server implements FN__single{
 		return $paramarr;
 	}
 }
-?>
