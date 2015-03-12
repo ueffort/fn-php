@@ -31,9 +31,10 @@ FN::setConfig(
 if(false === spl_autoload_functions() && function_exists('__autoload')) spl_autoload_registe('__autoload',false);
 spl_autoload_register(array('FN', 'loadClass'));
 class FN{
-	private $config = array();//全局配置设定，按每个主项目进行划分
+	private $_config = array();//全局配置设定，按每个主项目进行划分
 	private static $_FileSpace = array();
 	private static $_InitProject = false;
+    private static $_ProjectPath = null;
 	private static $_Instance = null;
 	private static $_NowCloud = false;
 	private static $_Frame = null;
@@ -51,12 +52,13 @@ class FN{
 	 * @return void
 	 */
 	static public function initProject($path = ''){
-		if(self::$_InitProject) return true;
+		if(self::$_InitProject) return ;
 		define('FN_PROJECT_PATH',$path ? $path : FN_SYSTEM_PATH);//项目路径
 		$cloud = self::getConfig('cloud');
 		self::$_NowCloud = $cloud ? $cloud : false;//保存云设置
 		self::$_Instance = self::getFrame();//初始化框架单例
 		self::$_InitProject = true;
+        self::$_ProjectPath = FN_PROJECT_PATH;
 	}
 	static public function getNowCloud(){
 		return self::$_NowCloud;
@@ -72,75 +74,47 @@ class FN{
 		}
 		return self::$_Platform[$platform];
 	}
-	/**
-	 * 获取基础服务:任何可由其他计算机单独完成的任务，实现全局单例模式，无需内部单例化
-	 * @param string $servername  调用的服务名称
-	 * @param string $link  映射名称，默认为default
-	 * @return class 服务实例
-	 */
-	static public function server($servername,$link='default'){
-		if(!isset(self::$_Server[$servername][$link])){
-			$config = self::serverConfig($servername,$link);
+
+    /**
+     * 获取基础服务:任何可由其他计算机单独完成的任务，实现全局单例模式，无需内部单例化
+     * @param string $server_name 调用的服务名称
+     * @param string $link 映射名称，默认为default
+     * @throws FN_exception
+     * @return class 服务实例
+     */
+	static public function server($server_name,$link='default'){
+		if(!isset(self::$_Server[$server_name][$link])){
+			$config = self::serverConfig($server_name,$link);
 			//将服务与实际驱动分割，实现控制管理
-			$config['drive'] = empty($config['drive'])?$servername : $config['drive'];
-			if(empty(self::$_Server[$servername])) self::$_Server[$servername] = array();
-			self::$_Server[$servername][$link] = self::_server($servername,$config);
+			$config['drive'] = empty($config['drive'])?$server_name : $config['drive'];
+			if(empty(self::$_Server[$server_name])) self::$_Server[$server_name] = array();
+			self::$_Server[$server_name][$link] = self::_server($server_name,$config);
 		}
-		return self::$_Server[$servername][$link];
+        if(empty(self::$_Server[$server_name][$link])) throw new FN_exception("Server: $server_name($link) init is error");
+		return self::$_Server[$server_name][$link];
 	}
 	/**
 	 * 获取基础服务,云服务需自行判断是否支持外部云调用方式（API接口）
-	 * @param string $servername  调用的服务名称
+	 * @param string $server_name  调用的服务名称
 	 * @param string $config  映射名称，默认为default
 	 * @return class 服务实例
 	 */
-	static private function _server($servername,$config){
+	static private function _server($server_name,$config){
 		if(isset($config['platform'])){
-			$return = self::getPlatform($config['platform'])->server($servername,$config);
+			$return = self::getPlatform($config['platform'])->server($server_name,$config);
 			if($return) return $return;
 		}
-		switch($servername){
-			case 'database':
-				switch($config['drive']){
-					case 'memcache'://cache
-						$class = new Memcache();
-						$class->connect($config['host'], $config['port']) or die ("Could not connect");
-						return $class;
-					case 'mongodb':
-						if (class_exists("MongoClient")) {
-							$class = 'MongoClient';
-						} else {
-							$class = 'Mongo';
-						}
-						$options = array();
-						if(isset($config['user']) && isset($config['pass'])){
-							$options['username'] = $config['user'];
-							$options['password'] = $config['pass'];
-						}
-						$class = new $class("mongodb://".$config['host'].":".$config['port'],$options);
-						if(isset($config['dbname'])){
-							$class->selectDB($config['dbname']);
-						}
-						return $class;
-					case 'redis':
-						$class = new Redis();
-						$class->connect($config['host'], $config['port']);
-						if(isset($config['pass'])) $class->auth($config['pass']);
-						return $class;
-				}
-				break;
-		}
-		$class_name = self::F('server.'.$servername.($config['drive'] ?  '.'.$config['drive'] : '' ));
+		$class_name = self::F('server.'.$server_name.($config['drive'] ?  '.'.$config['drive'] : '' ));
 		return call_user_func_array(array($class_name,'initServer'),array($config));
 	}
 	/**
 	 * 获取基础服务的配置信息，方便内部高阶服务调用基础配置
-	 * @param string $servername  调用的服务名称
+	 * @param string $server_name  调用的服务名称
 	 * @param string $link  映射名称，默认为default
 	 * @return array
 	 */
-	static public function serverConfig($servername,$link='default'){
-		return self::getConfig($servername.'/'.$link);
+	static public function serverConfig($server_name,$link='default'){
+		return self::getConfig($server_name.'/'.$link);
 	}
 	/**
 	 * 用静态方式获取框架
@@ -176,8 +150,8 @@ class FN{
 	/**
 	 * 全局存储映射关系，一层关系，可以存储对象，单一调用接口
 	 */
-	static public function map($key,$value=''){
-		if(empty($value)) return empty(self::$_Map[$key]) ? null : self::$_Map[$key];
+	static public function map($key,$value=null){
+		if($value===null) return !isset(self::$_Map[$key]) ? null : self::$_Map[$key];
 		return self::$_Map[$key] = $value;
 	}
 	/**
@@ -210,7 +184,7 @@ class FN{
 		list($class_name,$shortname,$path) = self::parseName($name);
 		//开启自动加载类，减少调用
 		if(!class_exists($class_name)){
-			return false;
+			throw new FN_exception("Class : $name is error!");
 		}
 		$Reflection = new ReflectionClass($class_name);
 		$interface = $Reflection->getInterfaceNames();
@@ -229,7 +203,15 @@ class FN{
 			return $return;
 		}elseif(in_array('FN__single',$interface)){//定义single接口,object instanceof class,parents class,interface
 			//return $class_name::getInstance($array);
-			return call_user_func_array(array($class_name,'getInstance'),$array);
+            if(empty($array)){
+                $class = self::map($name);
+                if($class) return $class;
+            }
+			$class = call_user_func_array(array($class_name,'getInstance'),$array);
+            if(!$array){
+                self::map($name, $class);
+            }
+            return $class;
 		}
 		return $class_name;
 	}
@@ -316,9 +298,9 @@ class FN{
 			return false;
 		}
 	}
-	static public function __callstatic($fname,$argus){
+	static public function __callstatic($method,$args){
 		$frame = self::getInstance();
-		return call_user_func_array(array(&$frame,'_'.$fname),$argus);
+		return call_user_func_array(array(&$frame,'_'.$method),$args);
 	}
 	static public function setKey($source,&$target,$path = false) {
 		if(is_array($source)) {
@@ -338,7 +320,7 @@ class FN{
 			case '!':return '';//暂留，无用
 			case '@':return FN_WEB_PATH.substr($dir,1);//当前访问的web路径
 			case '#':return FN_SYSTEM_PATH.substr($dir,1);//当前执行脚本所在的路径（可以当项目的访问路径）
-			case '$':return FN_PROJECT_PATH.substr($dir,1);//项目的路径
+			case '$':return self::$_ProjectPath.substr($dir,1);//项目的路径
 			default:return self::$_NowCloud ? self::getPlatform(self::$_NowCloud)->parsePath($dir,$Symbol) : $dir;//扩展当前云平台的路径解析
 		}
 	}
@@ -368,7 +350,7 @@ class FN{
 		return array($name.$child,$shortname,$path);
 	}
 	private function _getConfig($string=''){
-		$config = $this->config;
+		$config = $this->_config;
 		if(empty($string)) return $config;
 		$stringArray = explode('/',$string);
 		foreach($stringArray as $str) {
@@ -382,31 +364,41 @@ class FN{
 		if($string){
 			$config_tmp = $this->_getConfig($string);
 			$this->setKey($config,$config_tmp);
-			$string = '$this->config["'.str_replace('/','"]["',$string).'"] = $config_tmp;';
+			$string = '$this->_config["'.str_replace('/','"]["',$string).'"] = $config_tmp;';
 			return eval($string);
 		}
-		return $this->setKey($config,$this->config);
+		return $this->setKey($config,$this->_config);
 	}
 }
-//基本接口，适用于单例模式
+
+/**
+ * 单例接口
+ * Interface FN__single
+ */
 interface FN__single{
-	/**
-	 * 获取单例 getInstance
-	 *
-	 * @access  public static
-	 * @return Object
-	 */
+    /**
+     * 获取单例 getInstance
+     * @param $config
+     * @return mixed
+     */
 }
-//工厂接口，适用于工厂模式
-interface FN__factor{
-	/**
-	 * 执行工厂getFactor
-	 *
-	 * @access  public static
-	 * @return Object
-	 */
+
+/**
+ * 工厂接口
+ * Interface FN__factory
+ */
+interface FN__factory{
+    /**
+     * 执行工厂 geFactory
+     * @param $config
+     * @return mixed
+     */
 }
-//基本接口，类自动返回new对象
+
+/**
+ * 简单对象接口
+ * Interface FN__auto
+ */
 interface FN__auto{
 	/**
 	 * 自动实例化new
@@ -591,7 +583,7 @@ class FNbase{
 		return $hash;
 	}
 	static public function guid($namespace='',$op=false){
-		$uid = uniqid("", true);
+		$uid = uniqid($namespace, true);
 		$data = $namespace;
 		$data .= $_SERVER['REQUEST_TIME'];
 		$data .= $_SERVER['HTTP_USER_AGENT'];
@@ -717,28 +709,36 @@ class FNbase{
 
 //基本错误异常类
 class FN_exception extends Exception{
-	protected $_message;
-	private $_debug;
+	protected $__error_list = null;
 
-	public function __construct($message, $debug=''){
-		parent::__construct($message);
-		$this->_message = $message;
-		$this->_debug = $debug;
+	public function __construct($error_const){
+		$param = func_get_args();
+        $code = 0;
+		if(isset($this->__error_list[$error_const])){
+			$code = $error_const;
+			$param[0] = $this->__error_list[$error_const];
+			$message = call_user_func_array('sprintf', $param);
+		}else{
+			$message = implode(' ', $param);
+		}
+        parent::__construct($message, $code);
 	}
 
-	public function getErrorCode(){
-		return $this->_code;
+	public function getLog(){
+		return sprintf("[%s] [%s:%i] (%i) %s", date('Y-m-d H:i:s'), $this->getFile(), $this->getLine(), $this->getCode(), $this->getMessage());
 	}
 
-	public function getErrorMessage(){
-		return $this->_message;
+	public static function printException(Exception $exception){
+		$info = $exception->getTraceAsString();
+        echo sprintf("[%s] [%s:%i] (%i) %s<br />", date('Y-m-d H:i:s'), $exception->getFile(), $exception->getLine(), $exception->getCode(), $exception->getMessage());
+        print $info;
 	}
 
-	public function getDebug(){
-		return $this->_debug;
-	}
 }
-//服务平台抽象类类
+/**
+ * 服务平台抽象类
+ * Class FN_platform
+ */
 class FN_platform implements FN__auto{
 	protected $PlatformSelf = null;
     private $config = null;
@@ -756,13 +756,66 @@ class FN_platform implements FN__auto{
 	/*
 	 * 代理服务接口，转为全局类接口
 	 */
-	public function server($servername,&$config){
+	public function server($server_name,&$config){
+        switch($server_name){
+            case 'database':
+                switch($config['drive']){
+                    case 'mysql':
+                        try {
+	                        $pdo = new PDO($config['drive'].':dbname='.$config['dbname'].';host='.$config['host'].';port='.$config['port'], $config['user'], $config['pass']);
+                            $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+                            $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+                            $pdo->setAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, true);
+                            if (!empty($config['charset'])){
+                                $sth = $pdo->prepare('SET NAMES ' . $config['charset']);
+                                $sth->execute();
+                                if ($sth->rowCount() === false) throw new FN_exception('Server: failed to set charset');
+                            }
+                        } catch (PDOException $e) {
+                            throw new FN_exception('Server：connection failed: ' . $e->getMessage());
+                        }
+                        return $pdo;
+                    case 'mongodb':
+                        if (class_exists("MongoClient")) {
+                            $class = 'MongoClient';
+                        } else {
+                            $class = 'Mongo';
+                        }
+                        $options = array();
+                        if(isset($config['user']) && isset($config['pass'])){
+                            $options['username'] = $config['user'];
+                            $options['password'] = $config['pass'];
+                        }
+                        $class = new $class("mongodb://".$config['host'].":".$config['port'],$options);
+                        if(isset($config['dbname'])){
+                            $class->selectDB($config['dbname']);
+                        }
+                        return $class;
+                    case 'redis':
+                        $class = new Redis();
+                        if($class->connect($config['host'], $config['port']))
+                            throw new FN_exception('Server: redis connection failed');
+                        if(isset($config['pass'])) $class->auth($config['pass']);
+                        return $class;
+                }
+                break;
+            case 'cache':
+                switch($config['drive']){
+                    case 'memcached'://cache
+                        $class = new Memcached();
+                        if(!$class->addServer($config['host'], $config['port']))
+                            throw new FN_exception('Server: memcached connection failed');
+                        return $class;
+                }
 
+        }
+        return ;
 	}
 	public function parsePath($dir,$Symbol){
 		return $dir;
 	}
 }
+
 if(!function_exists('get_called_class')) {
 class class_tools{
 	private static $i = 0;
@@ -807,4 +860,3 @@ function get_called_class(){
 	return class_tools::get_called_class();
 }
 }
-?>

@@ -49,4 +49,3 @@ class FN_tools_right{
 		return ' (`'.$field.'` & '.$int.') = '.$int.' ';
 	}
 }
-?>

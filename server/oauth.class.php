@@ -1,5 +1,5 @@
 <?php
-class FN_tools_oauth extends FN_tools_rest implements FN__auto{
+class FN_server_oauth implements FN__auto{
 	protected $open_id = null;
 	protected $access_token = null;
 	protected $expires_time = null;
@@ -8,6 +8,17 @@ class FN_tools_oauth extends FN_tools_rest implements FN__auto{
 	protected $nickname = null;
 	protected $avatar = null;
 	protected $redirect_uri = null;
+
+    protected $config = null;
+    public function __construct($config){
+        $this->config = $config;
+        $this->init();
+    }
+    
+    protected function init(){
+        return true;
+    }
+
 	public function getVar(){
 		return array(
 			'oauth'=>$this->oauth,

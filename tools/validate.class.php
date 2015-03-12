@@ -11,14 +11,18 @@
 * );
 */
 class FN_tools_validate implements FN__single{
-	static private $_Instance = null;
 	static public function getInstance(){
-		if(!self::$_Instance){
-			self::$_Instance = new self();
-		}
-		return self::$_Instance;
+		return new self();
 	}
-	public function valid($array,$valid,$message=array()){
+
+    /**
+     * 验证列表
+     * @param $array
+     * @param $valid
+     * @param array $message
+     * @return array|bool
+     */
+    public function valid($array,$valid,$message=array()){
 		if(empty($valid)){
 			return false;
 		}
@@ -30,7 +34,15 @@ class FN_tools_validate implements FN__single{
 		}
 		return $list;
 	}
-	public function validRule($element,$rule,$message=array()){
+
+    /**
+     * 验证单个规则
+     * @param $element
+     * @param $rule
+     * @param array $message
+     * @return array|bool|int|string
+     */
+    public function validRule($element,$rule,$message=array()){
 		if(!is_array($rule)) $rule = array($rule=>true);
 		foreach($rule as $key=>$value){
 			$fun = '__'.$key;
@@ -49,6 +61,7 @@ class FN_tools_validate implements FN__single{
 		}
 		return true;
 	}
+    /****** 验证规则列表 ******/
 	private function __required($element){
 		return empty($element) ? false : true;
 	}
@@ -116,4 +129,3 @@ class FN_tools_validate implements FN__single{
 		return (strlen($element) > $max)  ? false : true;
 	}
 }
-?>

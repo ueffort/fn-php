@@ -1,14 +1,18 @@
 <?php
-//为rest接口设计的基本工具类
-class FN_tools_rest extends FN_class implements FN__auto{
-	protected $config = null;
-	public function __construct($config){
-		$this->config = $config;
-		$this->init();
-	}
-	protected function init(){
-		return true;
-	}
+/**
+ * 为请求http协议的rest接口设计的基本工具类
+ * Class FN_tools_http
+ */
+class FN_tools_http implements FN__single{
+
+    /**
+     * 实现单例接口
+     * @return FN_tools_http
+     */
+    public function getInstance(){
+        return new self;
+    }
+
 	/**
      * combineURL
      * 拼接url
@@ -17,8 +21,9 @@ class FN_tools_rest extends FN_class implements FN__auto{
      * @return string           返回拼接的url
      */
 	public function combineURL($baseURL,$keysArr){
-		return $baseURL."?".$this->combineParams($keysArr);
+		return $baseURL."?".self::combineParams($keysArr);
 	}
+
 	/**
 	 * combineParams
 	 * 拼接params
@@ -36,6 +41,7 @@ class FN_tools_rest extends FN_class implements FN__auto{
 		}
 		return substr ( $keyStr, 0, strlen ( $keyStr ) - 1 );
 	}
+
 	/**
      * get
      * get方式请求资源
@@ -46,9 +52,10 @@ class FN_tools_rest extends FN_class implements FN__auto{
      */
     public function get($url, $keysArr=array(),$options=array()){
 		$options['method'] = 'GET';
-		$options['url'] = empty($keysArr) ? $url : $this->combineURL($url, $keysArr);
-		return $this->request($options);
+		$options['url'] = empty($keysArr) ? $url : self::combineURL($url, $keysArr);
+		return self::request($options);
     }
+
 	/**
      * put
      * put方式提交资源
@@ -59,9 +66,10 @@ class FN_tools_rest extends FN_class implements FN__auto{
      */
     public function put($url, $keysArr=array(),$options=array()){
 		$options['method'] = 'PUT';
-		$options['url'] = empty($keysArr) ? $url : $this->combineURL($url, $keysArr);
-		return $this->request($options);
+		$options['url'] = empty($keysArr) ? $url : self::combineURL($url, $keysArr);
+		return self::request($options);
     }
+
 	/**
      * post
      * post方式请求资源
@@ -74,8 +82,9 @@ class FN_tools_rest extends FN_class implements FN__auto{
 		$options['method'] = 'POST';
 		$options['fields'] = $keysArr;
 		$options['url'] = $url;
-		return $this->request($options);
+		return self::request($options);
     }
+
 	/**
      * delete
      * delete方式删除资源
@@ -86,9 +95,10 @@ class FN_tools_rest extends FN_class implements FN__auto{
      */
     public function delete($url, $keysArr,$options=array()){
 		$options['method'] = 'DELETE';
-		$options['url'] = empty($keysArr) ? $url : $this->combineURL($url, $keysArr);
-		return $this->request($options);
+		$options['url'] = empty($keysArr) ? $url : self::combineURL($url, $keysArr);
+		return self::request($options);
     }
+
 	/**
      * head
      * head方式请求资源头部
@@ -99,10 +109,17 @@ class FN_tools_rest extends FN_class implements FN__auto{
      */
     public function head($url, $keysArr,$options=array()){
 		$options['method'] = 'HEAD';
-		$options['url'] = empty($keysArr) ? $url : $this->combineURL($url, $keysArr);
-		return $this->request($options);
+		$options['url'] = empty($keysArr) ? $url : self::combineURL($url, $keysArr);
+		return self::request($options);
     }
-	public function request($option){
+
+    /**
+     * 发送请求
+     * @param $option
+     * @return class
+     * @throws FN_exception
+     */
+    public function request($option){
 		//build request
 		$request = new FN_tools_restrequest( $option ['url'] );
 		$headers = array ('Content-Type' => 'application/x-www-form-urlencoded' );
@@ -177,6 +194,7 @@ class FN_tools_rest extends FN_class implements FN__auto{
 		return $request->send_request ();
 	}
 }
+
 class FN_tools_restrequest{
 	/**
 	 * The URL being requested.

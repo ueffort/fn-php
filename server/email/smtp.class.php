@@ -34,10 +34,10 @@ class FN_server_smtp{
 		$this->email = $email;
 	}
 	/* Main Function */
-	public function sendmail($to, $subject = "", $body = "", $mailtype, $cc = "", $bcc = "", $additional_headers = ""){
+	public function sendMail($to, $subject = "", $body = "", $mailtype, $cc = "", $bcc = "", $additional_headers = ""){
 		$mail_from = $this->get_address($this->strip_comment($this->email));
 		$body = ereg_replace("(^|(\r\n))(\.)", "\1.\3", $body);
-		$header .= "MIME-Version:1.0\r\n";
+		$header = "MIME-Version:1.0\r\n";
 		if($mailtype=="HTML"){
 			$header .= "Content-Type:text/html;charset=".$this->charset."\r\n";
 			$header .= "Content-Transfer-Encoding: quoted-printable\r\n";
@@ -220,4 +220,3 @@ class FN_server_smtp{
 		}
 	}
 }
-?>
