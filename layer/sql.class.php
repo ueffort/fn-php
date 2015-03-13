@@ -1,7 +1,18 @@
 <?php
 //数据库操作类
 //通过设置表字段，主键及主键是否自增长实现sql的自动编写等功能
-class FN_layer_sql implements FN__single{
+class FN_layer_sql implements FN__factory{
+	// 常量:SQL执行返回结果：自动，执行，取第一单元格，取整行，取
+	const RETURN_AUTO = 'auto';
+	const RETURN_EXEC = 'exec';
+	const RETURN_CELL = 'cell';
+	const RETURN_ROW = 'row';
+	const RETURN_COLUMN = 'column';
+	const RETURN_ALL = 'all';
+	const RETURN_KEY = 'key';
+	const RETURN_GROUP = 'group';
+	const RETURN_INSERTID = 'insertid';
+
 	//支持对象级别操作，所以所有内置变量都添加_前缀用于避免冲突
 	private $_sql=null;
 	private $_join=null;
@@ -18,41 +29,41 @@ class FN_layer_sql implements FN__single{
 	private $_error=null;
 	//驱动跟随映射走的
 	//protected $_drive=null;//数据库驱动，mysql，mssql，默认是mysql
-	protected $_link='default';//数据库映射名。默认是default
-	protected $_dbname=null;//数据库名
-	protected $_table=null;//数据表名
-	protected $_field = array();//字段数组
-	protected $_pkey = false;//主键字段
-	protected $_aint = true;//主键是否自增长
-	protected $_alias = null;//别名，用来自动连表等操作
-	static public function getInstance(){
+	protected $__link='default';//数据库映射名。默认是default
+	protected $__dbname=null;//数据库名
+	protected $__table=null;//数据表名
+	protected $__field = array();//字段数组
+	protected $__pkey = false;//主键字段
+	protected $__aint = true;//主键是否自增长
+	protected $__alias = null;//别名，用来自动连表等操作
+
+	static public function getFactory(){
 		$class = get_called_class();
 		return new $class();
 	}
 	private function __construct(){
-		$config = FN::serverConfig('database',$this->_link);
-		if(empty($config) || !in_array($config['drive'],array('mysql','mssql'))){
+		$config = FN::serverConfig('database',$this->__link);
+		if(empty($config) || !in_array($config['drive'],array('mysql'))){
 			$this->_error = 5;//配置错误
 			return false;
 		}
-		$this->_db = FN::server('database',$this->_link);
-		if(!empty($config['prefix'])) $this->table = $config['prefix'].$this->table;//实现表前缀添加
-		if(!in_array($this->_pkey,$this->_field)) $this->_pkey = null;
-		if(empty($this->_pkey)) $this->_aint = false;
+        $this->_db = FN::server('database',$this->__link);
+		if(!empty($config['prefix'])) $this->__table = $config['prefix'].$this->__table;//实现表前缀添加
+		if(!in_array($this->__pkey,$this->__field)) $this->__pkey = null;
+		if(empty($this->__pkey)) $this->__aint = false;
+        return $this;
 	}
 	public function add($array=array(),$replace=false){
-		if(empty($array) && empty($this->_exec)){
-			$this->_error = 1;//操作数据为空
-			return false;
-		}
+		if(empty($array) && empty($this->_exec)) throw new FN_layer_sqlException(FN_layer_sqlException::DATA_EMPTY);
+
 		if(!empty($array)){
 			foreach($array as $field=>$value){
 				$this->$field = $value;
 			}
 		}
 		$string1 = $string2 = '';
-		foreach($this->_field as $field){
-			if($field == $this->_pkey && $this->_aint){
+		foreach($this->__field as $field){
+			if($field == $this->__pkey && $this->__aint){
 				if(empty($array[$field])) continue;
 			}
 			if(!isset($array[$field])) $array[$field] = '';//默认字段为空
@@ -61,17 +72,18 @@ class FN_layer_sql implements FN__single{
 		}
 		$sql = ($replace ? 'replace' : 'insert').' into '.$this->getTable().'('.substr($string1,0,-1).')values('.substr($string2,0,-1).')';
 		$this->execute($sql);
-		if($this->_aint && $this->_pkey){
-			$_pkey = $this->_pkey;
-			$this->$_pkey = $this->_db->insert_id();
+		if($this->__aint && $this->__pkey){
+			$pkey = $this->__pkey;
+			$this->$pkey = $this->_db->insert_id();
 		}
 		return $this->_map();
 	}
 	public function addMore($array){
+		if(empty($array)) throw new FN_layer_sqlException(FN_layer_sqlException::DATA_EMPTY);
 		$field_array = array();
 		$string1 = $string2 = '';
-		foreach($this->_field as $field){
-			if($field == $this->_pkey && $this->_aint){
+		foreach($this->__field as $field){
+			if($field == $this->__pkey && $this->__aint){
 				continue;
 			}
 			$field_array[] = $field;
@@ -88,10 +100,7 @@ class FN_layer_sql implements FN__single{
 		return true;
 	}
 	public function edit($array=array()){
-		if(empty($array) && empty($this->_exec)){
-			$this->_error = 1;
-			return false;
-		}
+		if(empty($array) && empty($this->_exec)) throw new FN_layer_sqlException(FN_layer_sqlException::DATA_EMPTY);
 		if(!empty($array)){
 			foreach($array as $field=>$value){
 				$this->$field = $value;
@@ -101,47 +110,33 @@ class FN_layer_sql implements FN__single{
 		foreach($this->_exec as $key=>$value){
 			$string .= '`'.$key.'`'.self::judgeSQL($value,true).',';
 		}
-		if($this->_pkey){
-			$_pkey = $this->_pkey;
-			if($this->$_pkey >0) $this->where(' `'.$this->_pkey.'` = "'.$this->$_pkey.'"');
+		if($this->__pkey){
+			$pkey = $this->__pkey;
+			if($this->$pkey >0) $this->where(' `'.$this->__pkey.'` = "'.$this->$pkey.'"');
 		}
-		if(empty($this->_where)){
-			$this->_error = 3;//无查询条件
-			return false;
-		}
+		if(empty($this->_where)) throw new FN_layer_sqlException(FN_layer_sqlException::WHERE_ERROR);
 		$sql = 'update '.$this->getTable().' set '.substr($string,0,-1)
 			.$this->_buildSQL('where',$this->_where);
 		$this->execute($sql);
 		return $this->_map();
 	}
 	public function delete($string=''){
-		if($this->_pkey && $string){
+		if($this->__pkey && $string){
 			if(is_array($string)){
 				$string = implode('","',$string);
 			}
-			$this->where(' `'.$this->_pkey.'` in ("'.$string.'")');
-		}elseif($this->_pkey){
-			$_pkey = $this->_pkey;
-			if($this->$_pkey > 0) $this->where(' `'.$this->_pkey.'` = "'.$this->$_pkey.'"');
+			$this->where(' `'.$this->__pkey.'` in ("'.$string.'")');
+		}elseif($this->__pkey){
+			$pkey = $this->__pkey;
+			if($this->$pkey > 0) $this->where(' `'.$this->__pkey.'` = "'.$this->$pkey.'"');
 		}
-		if(empty($this->_where)){
-			$this->_error = 3;
-			return false;
-		}
+		if(empty($this->_where)) throw new FN_layer_sqlException(FN_layer_sqlException::WHERE_ERROR);
 		$sql = 'delete from '.$this->getTable()
 			.$this->_buildSQL('where',$this->_where);
 		$this->_map(false);
 		return $this->execute($sql);
 	}
-	public function selected($type=''){
-		switch($type){
-			case 'first': $type = 2;break;
-			case 'one': $type = 3;break;
-			case 'array': $type = 4;break;
-		}
-		return $this->query($this->buildSQL(),$type);
-	}
-	public function select($array = array()){
+	public function select($array = array(), $type=self::RETURN_EXEC){
 		if(!empty($array['limit'])){
 			$this->limit($array['limit']);
 		}
@@ -163,27 +158,21 @@ class FN_layer_sql implements FN__single{
 		if(!empty($array['field'])){
 			$this->field($array['field']);
 		}
-		return $this->query($this->buildSQL());
+		return $this->query($this->buildSQL(), $type);
 	}
-	public function find($string=''){
-		if(!$this->_pkey){
-			$this->_error = 2;//无主键
-			return false;
-		}
-		if($string){
-			if(is_array($string)){
-				$string = implode('","',$string);
-			}
-			$this->where(' `'.$this->_pkey.'` in ("'.$string.'")');
+	public function find($pkey=''){
+		if(!$this->__pkey) throw new FN_layer_sqlException(FN_layer_sqlException::PKEY_ERROR);
+		if($pkey){
+			if(is_array($pkey)) $pkey = implode('","',$pkey);
+			$this->where(' `'.$this->__pkey.'` in ("'.$pkey.'")');
+			$type = self::RETURN_ALL;
 		}else{
-			$_pkey = $this->_pkey;
-			if($this->$_pkey > 0) $this->where(' `'.$this->pkey.'` = "'.$this->$_pkey.'"');
+			$pkey = $this->__pkey;
+			$this->where(' `'.$this->__pkey.'` = "'.$this->$pkey.'"');
+			$type = self::RETURN_ROW;
 		}
-		if(empty($this->_where)){
-			$this->_error = 3;
-			return false;
-		}
-		$row = $this->query($this->buildSQL(),2);
+		if(empty($this->_where)) throw new FN_layer_sqlException(FN_layer_sqlException::WHERE_ERROR);
+		$row = $this->query($this->buildSQL(), $type);
 		$this->_map($row);
 		return $row;
 	}
@@ -197,23 +186,18 @@ class FN_layer_sql implements FN__single{
 		return $this;
 	}
 	public function page($page){
-		if(empty($this->_limit[1])){
-			$this->_error = 4;//没有设置limit
-			return false;
-		}
+		if(empty($this->_limit[1])) throw new FN_layer_sqlException(FN_layer_sqlException::PAGE_ERROR);
 		$this->_limit[0] = ($page-1)*$this->_limit[1];
 		return $this;
 	}
 	public function limit($l1,$l2=''){
-		if(empty($l2)){
-			if(is_array($l1)){
-				$this->_limit = array($l1[0],$l1[1]);
-			}else{
-				$this->_limit = array(0,$l1);
-			}
-		}else{
-			$this->_limit = array($l1,$l2);
+		if(is_array($l1)){
+			list($l1, $l2) = $l1;
+		}elseif(empty($l2)){
+			$l1 = 0;
+            $l2 = $l1;
 		}
+		$this->_limit = array($l1,$l2);
 		return $this;
 	}
 	public function order($string,$table=false){
@@ -232,48 +216,30 @@ class FN_layer_sql implements FN__single{
 		$this->_field_string[] = array($string,$table);
 		return $this;
 	}
-	public function query($sql,$type=0,$check=1){
-		if($check){
-			$this->_sql = $sql;
-			$this->_clear();
-		}
-		switch($type){
-			case 1://返回资源符
-				return $this->_db->query($sql);
-			case 2://返回第一行
-				return $this->_db->getFirst($sql);
-			case 3://返回第一行第一列
-				return $this->_db->getOne($sql);
-			case 4://返回所有行第一列的数组
-				$array = array();
-				$result = $this->_db->query($sql);
-				while($row = $this->_db->fetch_row($result)){
-					$array[] = $row[0];
-				}
-				return $array;
-			default://返回全部
-				if($this->_pkey){
-					$array = array();
-					$result = $this->_db->query($sql);
-					$op = 0;
-					while($row = $this->_db->fetch_array($result)){
-						if(empty($op)){
-							if(empty($row[$this->_pkey])){
-								$op = -1;
-							}else{
-								$op = 1;
-							}
-						}
-						if($op > 0){
-							$array[$row[$this->_pkey]] = $row;
-						}else{
-							$array[] = $row;
-						}
-					}
-					return $array;
-				}else{
-					return $this->_db->getAll($sql);
-				}
+	public function query($sql, $type=self::RETURN_AUTO){
+		try{
+			$sth = $this->_db->prepare($sql);
+			$sth->execute();
+			switch($type){
+				case self::RETURN_CELL://返回第一行第一列
+					return $sth->fetchColumn();
+				case self::RETURN_ROW://返回第一行
+					return $sth->fetch();
+				case self::RETURN_COLUMN://返回所有行第一列的数组
+					return $sth->fetchAll(PDO::FETCH_COLUMN);
+				case self::RETURN_ALL:
+					return $sth->fetchAll();
+				case self::RETURN_INSERTID:
+					return $this->_db->lastInsertId();
+				case self::RETURN_KEY:
+					return $sth->fetchAll(PDO::FETCH_COLUMN|PDO::FETCH_KEY_PAIR);
+				case self::RETURN_AUTO:
+				case self::RETURN_EXEC://返回资源符
+				default:
+					return $sth;
+			}
+		}catch(Exception $e){
+			throw new FN_layer_sqlException(FN_layer_sqlException::SQL_ERROR, $sql, $e->getCode(), $e->getMessage());
 		}
 	}
 	public function execute($sql){
@@ -285,20 +251,55 @@ class FN_layer_sql implements FN__single{
 		return $this->_sql;
 	}
 	public function getTable(){
-		return (empty($this->_dbname) ? '' : '`'.$this->_dbname.'`').'`'.$this->_table.'`';
+		return (empty($this->__dbname) ? '' : '`'.$this->__dbname.'`').'`'.$this->__table.'`';
 	}
 	public function getAlias(){
-		return $this->_alias;
+		return $this->__alias;
 	}
 	public function getAliasTable(){
-		return $this->_alias ? $this->_alias : $this->getTable();
+		return $this->__alias ? $this->__alias : $this->getTable();
 	}
 	public function getField(){
-		return $this->_field;
+		return $this->__field;
 	}
 	public function clear(){
 		$this->_clear();
 		return $this;
+	}
+	public function buildSQL(){
+		if(!empty($this->_join)){
+			$this->_sql = 'select '.$this->_buildJoinSQL('field',$this->_field_string).' from '.$this->getTable().(!empty($this->_join) ? ' '.$this->getAlias():'').' '
+				.$this->_buildJoinSQL('join',$this->_join).$this->_buildJoinSQL('where',$this->_where)
+				.$this->_buildJoinSQL('group',$this->_group).$this->_buildJoinSQL('having',$this->_having)
+				.$this->_buildJoinSQL('order',$this->_order).$this->_buildJoinSQL('limit',$this->_limit);
+		}else{
+			$this->_sql = 'select '.$this->_buildSQL('field',$this->_field_string).' from '.$this->getTable().' '.$this->_buildSQL('where',$this->_where)
+				.$this->_buildSQL('group',$this->_group).$this->_buildSQL('having',$this->_having)
+				.$this->_buildSQL('order',$this->_order).$this->_buildSQL('limit',$this->_limit);
+		}
+		$this->_clear();
+		return $this->_sql;
+	}
+	public function count($new_field=''){
+		$field = $this->_field_string;
+		$this->_field_string = array(array('count('.($new_field?'`'.$new_field.'`':'*').')',$this));
+		$num = $this->query($this->buildSql(),self::RETURN_CELL);
+		$this->_field_string = $field;
+		return $num ? $num : 0;
+	}
+	/**
+	 * 属性魔术方法
+	 */
+	public function __get($property){
+		if(!in_array($property ,$this->__field)) throw new FN_layer_sqlException(FN_layer_sqlException::FIELD_ERROR);
+		if(!$this->_row || !isset($this->_row[$property])) return '';
+		return $this->_row[$property];
+	}
+	public function __set($property,$value){
+		if(!in_array($property,$this->__field)) throw new FN_layer_sqlException(FN_layer_sqlException::FIELD_ERROR);
+		$this->_row[$property] = $value;
+		if(!($this->_pkey && $property == $this->_pkey)) $this->_exec[$property] = $value;
+		return true;
 	}
 	private function _buildSQL($type,$array){
 		$alias = '';
@@ -395,7 +396,7 @@ class FN_layer_sql implements FN__single{
 					$table_name = $a[0]->getTable();
 					$alias_2 = $a[0]->getAlias();
 					$string = ' '.$a[2].' join '.$table_name.(!empty($alias_2) ? ' as '.$alias_2: '').' on ';
-					$alias = !empty($this->_alias) ? $this->_alias:$this->getTable();
+					$alias = !empty($this->__alias) ? $this->__alias:$this->getTable();
 					$alias_2 = $a[0]->getAliasTable();
 					foreach($a[1] as $f=>$ff){
 						$string .= $alias.'.`'.$f.'` = '.$alias_2.'.`'.$ff.'` and ';
@@ -528,20 +529,6 @@ class FN_layer_sql implements FN__single{
 				return ' '.implode(' , ',$array);
 		}
 	}
-	public function buildSQL(){
-		if(!empty($this->_join)){
-			$this->_sql = 'select '.$this->_buildJoinSQL('field',$this->_field_string).' from '.$this->getTable().(!empty($this->_join) ? ' '.$this->getAlias():'').' '
-				.$this->_buildJoinSQL('join',$this->_join).$this->_buildJoinSQL('where',$this->_where)
-				.$this->_buildJoinSQL('group',$this->_group).$this->_buildJoinSQL('having',$this->_having)
-				.$this->_buildJoinSQL('order',$this->_order).$this->_buildJoinSQL('limit',$this->_limit);
-		}else{
-			$this->_sql = 'select '.$this->_buildSQL('field',$this->_field_string).' from '.$this->getTable().' '.$this->_buildSQL('where',$this->_where)
-				.$this->_buildSQL('group',$this->_group).$this->_buildSQL('having',$this->_having)
-				.$this->_buildSQL('order',$this->_order).$this->_buildSQL('limit',$this->_limit);
-		}
-		$this->_clear();
-		return $this->_sql;
-	}
 	private function _clear(){
 		$this->_join = $this->_where = $this->_group = $this->_having = $this->_order = $this->_limit = $this->_count = $this->_field_string = $this->_exec = null;
 	}
@@ -550,49 +537,6 @@ class FN_layer_sql implements FN__single{
 		if(is_array($row)) $this->_row = $row;
 		return $this->_row;
 	}
-	public function count($new_field=''){
-		$field = $this->_field_string;
-		$this->_field_string = array(array('count('.($new_field?'`'.$new_field.'`':'*').')',$this));
-		$num = $this->query($this->buildSql(),3,0);
-		$this->_field_string = $field;
-		return $num ? $num : 0;
-	}
-	public function __get($property){
-		if(in_array($property ,$this->_field)){
-			if(!$this->_row || !isset($this->_row[$property])) return '';
-			return $this->_row[$property];
-		}
-		$this->_error = 5;//该字段不存在
-		return false;
-	}
-	public function __set($property,$value){
-		if(in_array($property,$this->_field)){
-			$this->_row[$property] = $value;
-			if(!($this->_pkey && $property == $this->_pkey)) $this->_exec[$property] = $value;
-			return true;
-		}
-	}
-	public function getError(){
-		return $this->_error();
-	}
-	/*继承该ArrayAccess接口的函数
-	//是否存在某个下标、索引或者键值都是一个东西
-	public function offsetExists($offset){
-		return $this->$offset ? true : false;
-	}
-	//通过索引获取数据对象
-	public function offsetGet($offset){
-		return $this->$offset;
-	}
-	//通过索引设置对象
-	public function offsetSet($offset,$value){
-		return $this->$offset = $value;
-	}
-	//释放掉某个索引的对象
-	public function offsetUnset($offset){
-		return $this->$offset = '';
-	}
-	*/
 	static public function judgeSQL($value,$set=false){
 		if(is_array($value) && !$set) return ' in ("'.implode('","',$value).'")';
 		$Symbol = substr($value,0,1);
@@ -620,4 +564,15 @@ class FN_layer_sql implements FN__single{
 		return '="'.$value.'"';
 	}
 }
-?>
+class FN_layer_sqlException extends  FN_Exception{
+	const DATA_EMPTY = 101;
+	const WHERE_ERROR = 102;
+	const PKEY_ERROR = 103;
+	const FIELD_ERROR = 104;
+	const PAGE_ERROR = 105;
+	const SQL_ERROR = 106;
+	static protected  $__error_list = array(
+		self::DATA_EMPTY=>"数据为空",
+		self::SQL_ERROR=>"SQL:%s ERROR(%s)：%s",
+	);
+}

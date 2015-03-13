@@ -13,7 +13,7 @@ $fileserver->setFile($file);
 var_dump($fileserver->find());//可以直接查询已经设置的文件
 $fileserver->delete();//可以直接删除已经设置的文件
 */
-class FN_layer_gridfs implements FN__single{
+class FN_layer_gridfs implements FN__factory{
 	private $_db=null;
 	private $_gridfs=null;
 	private $_field=array();
@@ -28,7 +28,7 @@ class FN_layer_gridfs implements FN__single{
 	protected $_prefix=null;//数据集前缀，这个和sql里面的prefix不同，Gridfs没有table选项
 	protected $_domain='domain';//文档命名空间字段
 	protected $_autoid='autoid';//文档自增长字段
-	static public function getInstance($array){
+	static public function getFactory(){
 		$class = get_called_class();
 		return new $class();
 	}
@@ -210,5 +210,3 @@ class FN_layer_gridfs implements FN__single{
 		return $return;
 	}
 }
-
-?>
