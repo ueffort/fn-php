@@ -16,10 +16,18 @@ PHP Frame of Freedom Nature
 * 以低耦合的方式嵌入已存在的系统
 * 主要是提供常规功能的简化调用
 
-# 使用
+# 调用框架
 1. 在入口文件引入fn.php的框架文件
 2. 获取配置文件并存入框架管理`FN::setConfig($config)`
 3. 进行项目的初始化`FN::initProject();`
+
+# 命名说明：
+* 按项目路径规划类名：文件夹+文件名  ->  controller/main.class.php  ->  `class` controller_main
+* 调用方式：`FN::i('controller.main')`
+* 子类调用：`class` controller_mainChild -> `FN::i('controller.main|Child')` 命名有洁癖者可以忽略该功能
+* 系统类说明：
+    * 按框架目录开始：文件夹+文件名  ->  tools/route.class.php  ->  `class` FN_tools_route
+    * 调用方式：`FN::F('tools.route')`
 
 # 基本扩展类
 * tools.route:提供基本的链接路由
