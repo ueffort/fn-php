@@ -29,6 +29,14 @@ PHP Frame of Freedom Nature
     * 按框架目录开始：文件夹+文件名  ->  tools/route.class.php  ->  `class` FN_tools_route
     * 调用方式：`FN::F('tools.route')`
 
+# 类加载接口：
+* 一共3个类加载接口：
+    * FN__factory:需实现getFactory接口，根据调用参数，自动传入参数
+    * FN__single:需实现getInstance接口，如果无调用参数，则框架自动实现单例模式，如果有参数则需类自己维护单例（不推荐添加调用参数）
+    * FN__auto:每次调用都返回一个新的类实例
+    * 如果没有符合以上接口，则直接返回类名
+* 在接口中没有实现具体接口定义，为了满足任意参数的需求
+
 # 基本扩展类
 * tools.route:提供基本的链接路由
 * tools.logs:提供日志的接口
